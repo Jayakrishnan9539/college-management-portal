@@ -72,7 +72,7 @@ SECRET_KEY=your-secret-key-here
 DEBUG=True
 DB_NAME=lms_db
 DB_USER=root
-DB_PASSWORD=Jk@953991
+DB_PASSWORD=your_mysql_password
 DB_HOST=localhost
 DB_PORT=3306
 ```
