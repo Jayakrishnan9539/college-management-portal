@@ -8,7 +8,6 @@ from rest_framework import status
 from .models import Subject, Course, Enrollment
 from .serializers import SubjectSerializer, CourseSerializer, EnrollmentSerializer, EnrollStudentSerializer
 from apps.users.permissions import IsAdmin, IsFaculty, IsStudent, IsAdminOrFaculty
-from rest_framework.permissions import IsAuthenticated
 from apps.users.models import Student
 
 
@@ -18,7 +17,7 @@ class SubjectListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAdmin()]
-        return [IsAuthenticated()]  # anyone authenticated can view
+        return []  # anyone authenticated can view
 
     def get(self, request):
         branch = request.query_params.get('branch')

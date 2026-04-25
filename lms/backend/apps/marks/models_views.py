@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, serializers
 from apps.users.models import Student, Faculty
-from apps.courses.models import Subject, Course, Enrollment
+from apps.courses.models import Subject, Course
 from apps.users.permissions import IsFaculty, IsStudent, IsAdmin
 
 
@@ -80,41 +80,27 @@ class EnterMarksSerializer(serializers.Serializer):
 # ─── Views ────────────────────────────────────────────────────────────────────
 
 class EnterMarksView(APIView):
-    """POST /api/marks/course/<course_id>/enter/ — faculty enters marks for a student."""
+    """POST /api/marks/course/<course_id> — faculty enters marks for a student."""
     permission_classes = [IsFaculty]
 
     def post(self, request, course_id):
         faculty = request.user.faculty_profile
         try:
-            course = Course.objects.select_related('subject').get(
-                id=course_id, faculty=faculty
-            )
+            course = Course.objects.select_related('subject').get(id=course_id, faculty=faculty)
         except Course.DoesNotExist:
-            return Response(
-                {'error': 'Course not found or not assigned to you.'},
-                status=404
-            )
+            return Response({'error': 'Course not found or not assigned to you.'}, status=404)
 
         serializer = EnterMarksSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=400)
 
         data = serializer.validated_data
-        print("Saving marks for student:", data['student_id'])
-        print("Theory:", data['theory_marks'], "Practical:", data['practical_marks'])
-        print("Max theory:", course.subject.theory_marks, "Max practical:", course.subject.practical_marks)
 
         # Validate marks don't exceed subject maximum
         if data['theory_marks'] > course.subject.theory_marks:
-            return Response(
-                {'error': f"Theory marks cannot exceed {course.subject.theory_marks}."},
-                status=400
-            )
+            return Response({'error': f'Theory marks cannot exceed {course.subject.theory_marks}.'}, status=400)
         if data['practical_marks'] > course.subject.practical_marks:
-            return Response(
-                {'error': f"Practical marks cannot exceed {course.subject.practical_marks}."},
-                status=400
-            )
+            return Response({'error': f'Practical marks cannot exceed {course.subject.practical_marks}.'}, status=400)
 
         try:
             student = Student.objects.get(id=data['student_id'])
@@ -133,11 +119,7 @@ class EnterMarksView(APIView):
             }
         )
 
-        print("Marks saved! Grade:", marks_obj.grade)
-        return Response(
-            MarksSerializer(marks_obj).data,
-            status=201 if created else 200
-        )
+        return Response(MarksSerializer(marks_obj).data, status=201 if created else 200)
 
 
 class StudentMarksView(APIView):
@@ -185,30 +167,16 @@ class CourseMarksView(APIView):
         except Course.DoesNotExist:
             return Response({'error': 'Course not found.'}, status=404)
 
-        # Get all enrolled students
-        enrollments = Enrollment.objects.filter(
-            course=course
-        ).select_related('student__user')
-
-        print("Marks view - enrollments:", enrollments.count())
-
+        marks = Marks.objects.filter(course=course).select_related('student__user', 'subject')
         data = []
-        for enrollment in enrollments:
-            student = enrollment.student
-            # Check if marks already exist
-            existing = Marks.objects.filter(
-                student=student,
-                course=course
-            ).first()
-
+        for m in marks:
             data.append({
-                'student_id': student.id,
-                'roll_number': student.roll_number,
-                'student_name': student.user.name,
-                'theory_marks': existing.theory_marks if existing else 0,
-                'practical_marks': existing.practical_marks if existing else 0,
-                'total_marks': existing.total_marks if existing else 0,
-                'grade': existing.grade if existing else '—',
+                'student_id': m.student.id,
+                'roll_number': m.student.roll_number,
+                'student_name': m.student.user.name,
+                'theory_marks': m.theory_marks,
+                'practical_marks': m.practical_marks,
+                'total_marks': m.total_marks,
+                'grade': m.grade,
             })
-
         return Response({'course': str(course), 'results': data})

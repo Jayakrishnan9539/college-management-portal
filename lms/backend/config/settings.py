@@ -2,7 +2,7 @@
 Django settings for the Landmine Soft College Management System.
 Uses MySQL as the database and JWT for authentication.
 """
-
+import dj_database_url
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
@@ -29,7 +29,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    'drf_spectacular',
+    'drf_yasg',
     'django_filters',
 
     # Our apps
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # CORS must be before CommonMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -74,20 +75,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database — MySQL (change credentials via .env file)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('DB_NAME', default='lms_db'),
-        'USER': config('DB_USER', default='root'),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='3306'),
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-        },
-    }
-}
 
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL'),
+        conn_max_age=600
+    )
+}
 # We use a custom user model so Django's auth system works with our Student/Faculty/Admin
 AUTH_USER_MODEL = 'users.User'
 
@@ -118,7 +113,6 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 
